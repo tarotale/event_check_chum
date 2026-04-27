@@ -1,0 +1,43 @@
+name: ChumToto イベント監視
+
+on:
+  schedule:
+    - cron: '0 15 * * *'  # JST 00:00
+    - cron: '0 19 * * *'  # JST 04:00
+    - cron: '0 23 * * *'  # JST 08:00
+    - cron: '0 3 * * *'   # JST 12:00
+    - cron: '0 7 * * *'   # JST 16:00
+    - cron: '0 11 * * *'  # JST 20:00
+  workflow_dispatch:       # 手動実行も可能
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run checker
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: python check_events.py
+
+      - name: Commit updated events list
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add events.json
+          git diff --cached --quiet || git commit -m "Update events list"
+          git push
