@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -26,9 +27,20 @@ def fetch_events() -> list[dict]:
             continue
         title = title_el.get_text(strip=True)
 
-        all_p = [p.get_text(strip=True) for p in a.select("p")]
-        date = all_p[0] if len(all_p) >= 1 else ""
-        venue = all_p[1] if len(all_p) >= 2 else ""
+        # リンク全体のテキストを取得して日付・会場を抽出
+        full_text = a.get_text(separator="\n", strip=True)
+        lines = [l.strip() for l in full_text.split("\n") if l.strip()]
+
+        # 日付は "2026/XX/XX" の形式
+        date = ""
+        venue = ""
+        for i, line in enumerate(lines):
+            if re.match(r"\d{4}/\d{2}/\d{2}", line):
+                date = line
+                # 日付の次の行が会場
+                if i + 1 < len(lines):
+                    venue = lines[i + 1]
+                break
 
         url = "https://ticketdive.com" + a["href"]
         events.append({"title": title, "date": date, "venue": venue, "url": url})
@@ -41,8 +53,7 @@ def load_previous_events() -> list[dict]:
     if not path.exists():
         return []
     try:
-        # UTF-8で読む、失敗したら空リストを返す
-        text = path.read_bytes().decode("utf-8-sig")  # BOM付きUTF-8も対応
+        text = path.read_bytes().decode("utf-8-sig")
         return json.loads(text)
     except Exception:
         return []
@@ -63,7 +74,8 @@ def send_line_message(new_events: list[dict]):
     lines = ["🎵 ChumToto に新しいイベントが追加されました！\n"]
     for e in new_events:
         lines.append(f"🎤 {e['title']}")
-        lines.append(f"📅 {e['date']}")
+        if e.get("date"):
+            lines.append(f"📅 {e['date']}")
         if e.get("venue"):
             lines.append(f"📍 {e['venue']}")
         lines.append(f"🔗 {e['url']}\n")
@@ -87,6 +99,8 @@ def main():
     print("イベントを取得中...")
     current = fetch_events()
     print(f"取得件数: {len(current)}")
+    for e in current:
+        print(e)
 
     previous = load_previous_events()
     new_events = find_new_events(previous, current)
