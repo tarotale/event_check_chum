@@ -26,7 +26,6 @@ def fetch_events() -> list[dict]:
             continue
         title = title_el.get_text(strip=True)
 
-        # p タグから日付・会場を取得
         all_p = [p.get_text(strip=True) for p in a.select("p")]
         date = all_p[0] if len(all_p) >= 1 else ""
         venue = all_p[1] if len(all_p) >= 2 else ""
@@ -39,9 +38,14 @@ def fetch_events() -> list[dict]:
 
 def load_previous_events() -> list[dict]:
     path = Path(EVENTS_FILE)
-    if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
-    return []
+    if not path.exists():
+        return []
+    try:
+        # UTF-8で読む、失敗したら空リストを返す
+        text = path.read_bytes().decode("utf-8-sig")  # BOM付きUTF-8も対応
+        return json.loads(text)
+    except Exception:
+        return []
 
 
 def save_events(events: list[dict]):
