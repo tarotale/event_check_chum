@@ -22,13 +22,17 @@ def fetch_events() -> list[dict]:
 
     for a in soup.select("a[href^='/event/']"):
         title_el = a.select_one("h3")
-        date_el = a.select_one("p")
         if not title_el:
             continue
         title = title_el.get_text(strip=True)
-        date = date_el.get_text(strip=True) if date_el else ""
+
+        # p タグから日付・会場を取得
+        all_p = [p.get_text(strip=True) for p in a.select("p")]
+        date = all_p[0] if len(all_p) >= 1 else ""
+        venue = all_p[1] if len(all_p) >= 2 else ""
+
         url = "https://ticketdive.com" + a["href"]
-        events.append({"title": title, "date": date, "url": url})
+        events.append({"title": title, "date": date, "venue": venue, "url": url})
 
     return events
 
@@ -54,8 +58,10 @@ def find_new_events(previous: list[dict], current: list[dict]) -> list[dict]:
 def send_line_message(new_events: list[dict]):
     lines = ["🎵 ChumToto に新しいイベントが追加されました！\n"]
     for e in new_events:
-        lines.append(f"📅 {e['date']}")
         lines.append(f"🎤 {e['title']}")
+        lines.append(f"📅 {e['date']}")
+        if e.get("venue"):
+            lines.append(f"📍 {e['venue']}")
         lines.append(f"🔗 {e['url']}\n")
 
     message_text = "\n".join(lines).strip()
