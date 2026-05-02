@@ -14,8 +14,23 @@ LINE_USER_ID = os.environ["LINE_USER_ID"]
 
 
 def fetch_events() -> list[dict]:
-    headers = {"User-Agent": "Mozilla/5.0"}
-    res = requests.get(ARTIST_URL, headers=headers, timeout=15)
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+    }
+
+    session = requests.Session()
+    # まずトップページにアクセスしてCookieを取得
+    session.get("https://ticketdive.com", headers=headers, timeout=15)
+    # 次にアーティストページを取得
+    res = session.get(ARTIST_URL, headers=headers, timeout=15)
     res.raise_for_status()
 
     soup = BeautifulSoup(res.text, "html.parser")
@@ -27,17 +42,14 @@ def fetch_events() -> list[dict]:
             continue
         title = title_el.get_text(strip=True)
 
-        # リンク全体のテキストを取得して日付・会場を抽出
         full_text = a.get_text(separator="\n", strip=True)
         lines = [l.strip() for l in full_text.split("\n") if l.strip()]
 
-        # 日付は "2026/XX/XX" の形式
         date = ""
         venue = ""
         for i, line in enumerate(lines):
             if re.match(r"\d{4}/\d{2}/\d{2}", line):
                 date = line
-                # 日付の次の行が会場
                 if i + 1 < len(lines):
                     venue = lines[i + 1]
                 break
