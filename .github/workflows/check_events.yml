@@ -2,13 +2,11 @@ name: ChumToto イベント監視
 
 on:
   schedule:
-    - cron: '0 15 * * *'  # JST 00:00
-    - cron: '0 19 * * *'  # JST 04:00
-    - cron: '0 23 * * *'  # JST 08:00
-    - cron: '0 3 * * *'   # JST 12:00
-    - cron: '0 7 * * *'   # JST 16:00
-    - cron: '0 11 * * *'  # JST 20:00
+    - cron: '0 * * * *'  # 毎時0分に実行（1時間おき）
   workflow_dispatch:       # 手動実行も可能
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   check:
